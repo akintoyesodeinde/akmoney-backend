@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Restricted SSM Document to roll back AkMoney Frontend to the previous verified release.",
+  "parameters": {},
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "RollbackAkMoneyFrontend",
+      "inputs": {
+        "timeoutSeconds": "300",
+        "runCommand": [
+          "#!/usr/bin/env bash",
+          "set -Eeuo pipefail",
+          "cd /opt/akmoney",
+          "/opt/akmoney/rollback-release.sh frontend"
+        ]
+      }
+    }
+  ]
+}

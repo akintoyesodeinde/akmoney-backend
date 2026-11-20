@@ -1,0 +1,56 @@
+{
+  "LaunchTemplateName": "akmoney-launch-template",
+  "VersionDescription": "AkMoney Production Amazon Linux 2023 t3.micro Launch Template with IMDSv2 and GP3 encryption",
+  "LaunchTemplateData": {
+    "ImageId": "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
+    "InstanceType": "t3.micro",
+    "CreditSpecification": {
+      "CpuCredits": "standard"
+    },
+    "BlockDeviceMappings": [
+      {
+        "DeviceName": "/dev/xvda",
+        "Ebs": {
+          "VolumeSize": 20,
+          "VolumeType": "gp3",
+          "Iops": 3000,
+          "Throughput": 125,
+          "DeleteOnTermination": true,
+          "Encrypted": true
+        }
+      }
+    ],
+    "IamInstanceProfile": {
+      "Name": "akmoney-ec2-instance-profile"
+    },
+    "MetadataOptions": {
+      "HttpEndpoint": "enabled",
+      "HttpTokens": "required",
+      "HttpPutResponseHopLimit": 2,
+      "InstanceMetadataTags": "enabled"
+    },
+    "Monitoring": {
+      "Enabled": false
+    },
+    "TagSpecifications": [
+      {
+        "ResourceType": "instance",
+        "Tags": [
+          { "Key": "Name", "Value": "akmoney-prod-server" },
+          { "Key": "Project", "Value": "AkMoney" },
+          { "Key": "Environment", "Value": "Production" },
+          { "Key": "ManagedBy", "Value": "AkMoney-Deployment" }
+        ]
+      },
+      {
+        "ResourceType": "volume",
+        "Tags": [
+          { "Key": "Name", "Value": "akmoney-prod-root-ebs" },
+          { "Key": "Project", "Value": "AkMoney" },
+          { "Key": "Environment", "Value": "Production" },
+          { "Key": "ManagedBy", "Value": "AkMoney-Deployment" }
+        ]
+      }
+    ]
+  }
+}

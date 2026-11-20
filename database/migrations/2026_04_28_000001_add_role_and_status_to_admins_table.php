@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('admins', function (Blueprint $table) {
+            $table->string('role')->default('super_admin')->after('id');
+            $table->tinyInteger('status')->default(1)->after('role'); // 1=active, 0=banned
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('admins', function (Blueprint $table) {
+            $table->dropColumn(['role', 'status']);
+        });
+    }
+};

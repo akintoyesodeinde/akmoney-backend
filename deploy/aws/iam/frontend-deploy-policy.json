@@ -1,0 +1,81 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowFrontendDockerHubCredentialsRetrieval",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:415805875879:parameter/akmoney/ci/frontend/dockerhub-username",
+        "arn:aws:ssm:*:415805875879:parameter/akmoney/ci/frontend/dockerhub-token"
+      ]
+    },
+    {
+      "Sid": "AllowKMSDecryptForFrontendCIParameters",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": [
+            "ssm.us-east-1.amazonaws.com",
+            "ssm.us-east-2.amazonaws.com",
+            "ssm.eu-west-1.amazonaws.com",
+            "ssm.eu-west-2.amazonaws.com"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "AllowApprovedFrontendSSMDocumentsOnTaggedEC2",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand"
+      ],
+      "Resource": [
+        "arn:aws:ssm:*:415805875879:document/AkMoney-Deploy-Frontend",
+        "arn:aws:ssm:*:415805875879:document/AkMoney-Rollback-Frontend"
+      ]
+    },
+    {
+      "Sid": "AllowSSMCommandOnTaggedAkMoneyInstance",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:415805875879:instance/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "AkMoney",
+          "aws:ResourceTag/Environment": "Production"
+        }
+      }
+    },
+    {
+      "Sid": "AllowSSMCommandStatusTracking",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations",
+        "ssm:ListCommands"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowEC2InstanceDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

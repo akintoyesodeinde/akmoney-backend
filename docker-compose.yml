@@ -1,0 +1,121 @@
+# AkMoney Local Docker Compose Validation Environment (Phase 9)
+# Includes: React Frontend + Nginx Reverse Proxy, Laravel Backend, Laravel Scheduler, and Local MySQL 8.0
+
+services:
+  frontend:
+    build:
+      context: ../akmoney-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: akmoney-local-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks:
+      - akmoney-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: akmoney-local-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: AkMoney
+      APP_ENV: local
+      APP_KEY: base64:V0xSNE9qTU91Tk9oZlBwRml0WVpIdVprT3BScU9rcmM=
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:3000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: akmoney
+      DB_LOCAL_DATABASE: akmoney
+      DB_USERNAME: akmoney_app
+      DB_LOCAL_USERNAME: akmoney_app
+      DB_PASSWORD: akmoney_local_pass
+      DB_LOCAL_PASSWORD: akmoney_local_pass
+      SESSION_DRIVER: file
+      SESSION_SAME_SITE: lax
+      QUEUE_CONNECTION: sync
+      CACHE_STORE: file
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - akmoney-net
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: akmoney-local-scheduler
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c", "while true; do php /var/www/html/artisan schedule:run --verbose --no-interaction; sleep 60; done"]
+    environment:
+      APP_NAME: AkMoney
+      APP_ENV: local
+      APP_KEY: base64:V0xSNE9qTU91Tk9oZlBwRml0WVpIdVprT3BScU9rcmM=
+      APP_DEBUG: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: akmoney
+      DB_LOCAL_DATABASE: akmoney
+      DB_USERNAME: akmoney_app
+      DB_LOCAL_USERNAME: akmoney_app
+      DB_PASSWORD: akmoney_local_pass
+      DB_LOCAL_PASSWORD: akmoney_local_pass
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - akmoney-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: akmoney-local-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: local_root_password
+      MYSQL_DATABASE: akmoney
+      MYSQL_USER: akmoney_app
+      MYSQL_PASSWORD: akmoney_local_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-plocal_root_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - akmoney-net
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  akmoney-net:
+    driver: bridge

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <rect width="120" height="120" rx="18" fill="#fff"/>
+  <text x="50%" y="44" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="#4285F4" text-anchor="middle">Google</text>
+  <text x="50%" y="62" font-family="Arial,sans-serif" font-size="11" fill="#5F6368" text-anchor="middle">OAuth 2.0</text>
+  <line x1="22" y1="76" x2="98" y2="76" stroke="#E8EAED" stroke-width="1.5"/>
+  <!-- Person icon -->
+  <circle cx="60" cy="85" r="5" fill="#4285F4"/>
+  <path d="M 48 100 Q 48 92 60 92 Q 72 92 72 100" fill="#4285F4"/>
+  <!-- Lock badge -->
+  <rect x="72" y="80" width="14" height="12" rx="2" fill="#EA4335"/>
+  <rect x="75" y="83" width="8" height="6" rx="1" fill="#fff" opacity="0.9"/>
+  <path d="M 77 83 Q 77 80 79 80 Q 81 80 81 83" fill="none" stroke="#EA4335" stroke-width="1.5"/>
+</svg>

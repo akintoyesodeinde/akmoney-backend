@@ -1,0 +1,23 @@
+{
+  "DBInstanceIdentifier": "akmoney-prod-db",
+  "DBInstanceClass": "db.t3.micro",
+  "Engine": "mysql",
+  "EngineVersion": "8.0",
+  "MultiAZ": false,
+  "AllocatedStorage": 20,
+  "StorageType": "gp3",
+  "StorageEncrypted": true,
+  "DBName": "akmoney",
+  "Port": 3306,
+  "PubliclyAccessible": false,
+  "BackupRetentionPeriod": 7,
+  "DeletionProtection": true,
+  "CopyTagsToSnapshot": true,
+  "AutoMinorVersionUpgrade": true,
+  "Tags": [
+    { "Key": "Name", "Value": "akmoney-prod-db" },
+    { "Key": "Project", "Value": "AkMoney" },
+    { "Key": "Environment", "Value": "Production" },
+    { "Key": "ManagedBy", "Value": "AkMoney-Deployment" }
+  ]
+}

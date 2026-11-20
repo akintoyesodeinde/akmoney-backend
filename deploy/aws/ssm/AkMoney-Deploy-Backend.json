@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Restricted SSM Document to deploy an immutable AkMoney Backend Docker image and optionally run controlled database migrations.",
+  "parameters": {
+    "ImageTag": {
+      "type": "String",
+      "description": "Immutable backend image reference (<user>/akmoney-backend:<git-sha>)",
+      "allowedPattern": "^[a-zA-Z0-9._-]+/akmoney-backend(:[a-f0-9]{7,40}|@sha256:[a-f0-9]{64})$"
+    },
+    "RunMigrations": {
+      "type": "String",
+      "description": "Whether to execute php artisan migrate --force",
+      "default": "true",
+      "allowedValues": [
+        "true",
+        "false"
+      ]
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "DeployAkMoneyBackend",
+      "inputs": {
+        "timeoutSeconds": "600",
+        "runCommand": [
+          "#!/usr/bin/env bash",
+          "set -Eeuo pipefail",
+          "cd /opt/akmoney",
+          "/opt/akmoney/deploy-backend.sh '{{ ImageTag }}' '{{ RunMigrations }}'"
+        ]
+      }
+    }
+  ]
+}

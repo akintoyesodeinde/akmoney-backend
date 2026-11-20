@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Restricted SSM Document to deploy an immutable AkMoney Frontend Docker image.",
+  "parameters": {
+    "ImageTag": {
+      "type": "String",
+      "description": "Immutable frontend image reference (<user>/akmoney-frontend:<git-sha>)",
+      "allowedPattern": "^[a-zA-Z0-9._-]+/akmoney-frontend(:[a-f0-9]{7,40}|@sha256:[a-f0-9]{64})$"
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "DeployAkMoneyFrontend",
+      "inputs": {
+        "timeoutSeconds": "300",
+        "runCommand": [
+          "#!/usr/bin/env bash",
+          "set -Eeuo pipefail",
+          "cd /opt/akmoney",
+          "/opt/akmoney/deploy-frontend.sh '{{ ImageTag }}'"
+        ]
+      }
+    }
+  ]
+}

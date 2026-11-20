@@ -1,0 +1,77 @@
+# AkMoney Production Docker Compose Configuration (Phase 12 & Phase 20)
+# Runs on single Amazon EC2 t3.micro instance (1 GiB RAM + 1 GiB Swap)
+# Database: External Private Amazon RDS MySQL (db.t3.micro, Single-AZ) — No local MySQL container
+
+services:
+  frontend:
+    image: ${FRONTEND_IMAGE:-akintoyesodeinde/akmoney-frontend:latest}
+    container_name: akmoney-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 128m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - akmoney-private-net
+
+  backend:
+    image: ${BACKEND_IMAGE:-akintoyesodeinde/akmoney-backend:latest}
+    container_name: akmoney-backend-prod
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - /opt/akmoney/.env.backend
+    volumes:
+      - /opt/akmoney/storage:/var/www/html/storage
+      - /opt/akmoney/certs/rds-global-bundle.pem:/etc/ssl/certs/rds-global-bundle.pem:ro
+    mem_limit: 384m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "15m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - akmoney-private-net
+
+  scheduler:
+    image: ${BACKEND_IMAGE:-akintoyesodeinde/akmoney-backend:latest}
+    container_name: akmoney-scheduler-prod
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c", "while true; do php /var/www/html/artisan schedule:run --verbose --no-interaction; sleep 60; done"]
+    env_file:
+      - /opt/akmoney/.env.backend
+    volumes:
+      - /opt/akmoney/storage:/var/www/html/storage
+      - /opt/akmoney/certs/rds-global-bundle.pem:/etc/ssl/certs/rds-global-bundle.pem:ro
+    mem_limit: 128m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    networks:
+      - akmoney-private-net
+
+networks:
+  akmoney-private-net:
+    driver: bridge

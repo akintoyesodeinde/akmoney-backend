@@ -1,0 +1,36 @@
+{
+  "EC2SecurityGroup": {
+    "GroupName": "akmoney-ec2-sg",
+    "Description": "AkMoney Production EC2 Security Group - Public HTTP/HTTPS only; administration via AWS SSM",
+    "IngressRules": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 80,
+        "ToPort": 80,
+        "CidrIp": "0.0.0.0/0",
+        "Description": "Public HTTP (Nginx Redirect/Frontend)"
+      },
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "CidrIp": "0.0.0.0/0",
+        "Description": "Public HTTPS (Nginx TLS Termination)"
+      }
+    ],
+    "DisallowedPublicPorts": [22, 3306, 8000, 2375, 2376]
+  },
+  "RDSSecurityGroup": {
+    "GroupName": "akmoney-rds-sg",
+    "Description": "AkMoney Production RDS MySQL Security Group - Private access from akmoney-ec2-sg only",
+    "IngressRules": [
+      {
+        "IpProtocol": "tcp",
+        "FromPort": 3306,
+        "ToPort": 3306,
+        "SourceSecurityGroupName": "akmoney-ec2-sg",
+        "Description": "MySQL 3306 from AkMoney EC2 Instance Security Group only"
+      }
+    ]
+  }
+}
