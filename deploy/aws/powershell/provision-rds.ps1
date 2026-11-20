@@ -1,51 +1,51 @@
 <#
 .SYNOPSIS
     Phase 6 — Idempotent Amazon RDS MySQL (db.t3.micro, Single-AZ, 20 GiB gp3, Encrypted, Private) Provisioning
-.DESCRIPTION
-    Validates AWS Account ID 415805875879 and provisions exactly one Amazon RDS MySQL instance:
-    - Identifier: akmoney-prod-db
-    - Class: db.t3.micro
-    - Single-AZ, 20 GiB gp3 encrypted, PubliclyAccessible = false, DeletionProtection = true
-    - 7-day automated backup retention, no storage autoscaling
 #>
 [CmdletBinding()]
 param(
-    [string]$Profile = "",
-    [string]$Region = "us-east-1",
+    [string]$Profile = "akmoney",
+    [string]$Region = "eu-north-1",
     [string]$ExpectedAccountId = "415805875879",
     [string]$MasterUsername = "akmoney_admin"
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $AwsArgs = @("--region", $Region)
 if ($Profile) { $AwsArgs += @("--profile", $Profile) }
 
 $IdentityJson = aws sts get-caller-identity @AwsArgs | ConvertFrom-Json
-if ($IdentityJson.Account -ne $ExpectedAccountId) {
+if (-not $IdentityJson -or $IdentityJson.Account -ne $ExpectedAccountId) {
     throw "CRITICAL: Authenticated AWS Account ($($IdentityJson.Account)) does NOT match $ExpectedAccountId."
 }
 
 $DbIdentifier = "akmoney-prod-db"
-$ExistingDb = aws rds describe-db-instances --db-instance-identifier $DbIdentifier @AwsArgs 2>$null
+$ExistingDb = aws rds describe-db-instances --db-instance-identifier $DbIdentifier @AwsArgs 2>&1
 if ($LASTEXITCODE -eq 0 -and $ExistingDb) {
     $DbObj = ($ExistingDb | ConvertFrom-Json).DBInstances[0]
     Write-Host "RDS Instance $DbIdentifier already exists (Status: $($DbObj.DBInstanceStatus))." -ForegroundColor Green
     return
 }
 
-$VpcId = aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[0].VpcId" --output text @AwsArgs
-$RdsSgId = aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VpcId" "Name=group-name,Values=akmoney-rds-sg" --query "SecurityGroups[0].GroupId" --output text @AwsArgs
+$VpcId = (aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[0].VpcId" --output text @AwsArgs).Trim()
+$RdsSgId = (aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VpcId" "Name=group-name,Values=akmoney-rds-sg" --query "SecurityGroups[0].GroupId" --output text @AwsArgs).Trim()
 if (-not $RdsSgId -or $RdsSgId -eq "None") {
     throw "RDS Security Group 'akmoney-rds-sg' not found. Run provision-networking.ps1 first."
 }
 
-# Prompt securely for Master DB password (never logged or passed in plain text script files)
-$SecureMasterPass = Read-Host -Prompt "Enter RDS Master Password for '$MasterUsername' (min 16 chars)" -AsSecureString
-$Bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureMasterPass)
-$PlainMasterPass = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($Bstr)
+# Prompt securely for Master DB password (or read from SSM if already initialized)
+$ExistingPass = aws ssm get-parameter --name "/akmoney/prod/backend/db-password" --with-decryption --query "Parameter.Value" --output text @AwsArgs 2>&1
+if ($LASTEXITCODE -eq 0 -and $ExistingPass -and $ExistingPass -notmatch "ParameterNotFound") {
+    $PlainMasterPass = $ExistingPass.Trim()
+} else {
+    $SecureMasterPass = Read-Host -Prompt "Enter RDS Master Password for '$MasterUsername' (min 16 chars)" -AsSecureString
+    $Bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureMasterPass)
+    $PlainMasterPass = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($Bstr)
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($Bstr)
+}
 
 try {
-    Write-Host "Provisioning Amazon RDS MySQL db.t3.micro (Single-AZ, 20 GiB gp3, Encrypted, Private)..." -ForegroundColor Yellow
+    Write-Host "Provisioning Amazon RDS MySQL db.t3.micro (Single-AZ, 20 GiB gp3, Encrypted, Private) in $Region..." -ForegroundColor Yellow
     aws rds create-db-instance `
         --db-instance-identifier $DbIdentifier `
         --db-instance-class "db.t3.micro" `
@@ -69,17 +69,11 @@ try {
         --tags Key=Name,Value=akmoney-prod-db Key=Project,Value=AkMoney Key=Environment,Value=Production Key=ManagedBy,Value=AkMoney-Deployment `
         @AwsArgs | Out-Null
 
-    Write-Host "Waiting for RDS instance '$DbIdentifier' to become available..." -ForegroundColor Cyan
-    aws rds wait db-instance-available --db-instance-identifier $DbIdentifier @AwsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create RDS instance $DbIdentifier"
+    }
 
-    $Endpoint = aws rds describe-db-instances --db-instance-identifier $DbIdentifier --query "DBInstances[0].Endpoint.Address" --output text @AwsArgs
-    Write-Host "RDS MySQL Instance Available at Private Endpoint: $Endpoint" -ForegroundColor Green
-
-    # Store RDS endpoint in SSM Parameter Store
-    aws ssm put-parameter --name "/akmoney/prod/backend/db-host" --type "String" --value $Endpoint --overwrite @AwsArgs | Out-Null
-    aws ssm put-parameter --name "/akmoney/prod/backend/db-port" --type "String" --value "3306" --overwrite @AwsArgs | Out-Null
-    aws ssm put-parameter --name "/akmoney/prod/backend/db-name" --type "String" --value "akmoney" --overwrite @AwsArgs | Out-Null
+    Write-Host "RDS instance '$DbIdentifier' creation initiated." -ForegroundColor Green
 } finally {
-    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($Bstr)
     $PlainMasterPass = $null
 }

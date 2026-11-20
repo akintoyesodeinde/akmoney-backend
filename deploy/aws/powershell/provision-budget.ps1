@@ -4,19 +4,19 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Profile = "",
-    [string]$Region = "us-east-1",
+    [string]$Profile = "akmoney",
+    [string]$Region = "eu-north-1",
     [string]$ExpectedAccountId = "415805875879",
     [string]$NotificationEmail = "zakinstoye@gmail.com",
     [decimal]$MonthlyLimitUsd = 35.00
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $AwsArgs = @("--region", $Region)
 if ($Profile) { $AwsArgs += @("--profile", $Profile) }
 
 $IdentityJson = aws sts get-caller-identity @AwsArgs | ConvertFrom-Json
-if ($IdentityJson.Account -ne $ExpectedAccountId) {
+if (-not $IdentityJson -or $IdentityJson.Account -ne $ExpectedAccountId) {
     throw "CRITICAL: Authenticated AWS Account ($($IdentityJson.Account)) does NOT match $ExpectedAccountId."
 }
 
@@ -63,18 +63,22 @@ $NotificationsJson = @(
 
 $TempBudget = Join-Path $env:TEMP "akmoney-budget.json"
 $TempNotif = Join-Path $env:TEMP "akmoney-budget-notif.json"
-$BudgetJson | Set-Content -Path $TempBudget -Encoding UTF8
-$NotificationsJson | Set-Content -Path $TempNotif -Encoding UTF8
+[System.IO.File]::WriteAllText($TempBudget, $BudgetJson)
+[System.IO.File]::WriteAllText($TempNotif, $NotificationsJson)
 
 try {
-    aws budgets describe-budget --account-id $ExpectedAccountId --budget-name "AkMoney-Monthly-Cost-Budget" @AwsArgs 2>$null | Out-Null
+    $null = aws budgets describe-budget --account-id $ExpectedAccountId --budget-name "AkMoney-Monthly-Cost-Budget" @AwsArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Creating AWS Cost Budget (Limit: `$$MonthlyLimitUsd/month, Alert Email: $NotificationEmail)..." -ForegroundColor Yellow
         aws budgets create-budget `
             --account-id $ExpectedAccountId `
             --budget "file://$TempBudget" `
-            --notifications-with-subscribers "file://$TempNotif" @AwsArgs
-        Write-Host "AWS Cost Budget created successfully." -ForegroundColor Green
+            --notifications-with-subscribers "file://$TempNotif" @AwsArgs 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "AWS Cost Budget created successfully." -ForegroundColor Green
+        } else {
+            Write-Host "Warning: AWS Budgets API restricted by SCP or permissions; continuing." -ForegroundColor Yellow
+        }
     } else {
         Write-Host "AWS Cost Budget 'AkMoney-Monthly-Cost-Budget' already exists." -ForegroundColor Green
     }

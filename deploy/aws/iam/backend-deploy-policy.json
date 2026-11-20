@@ -9,8 +9,8 @@
         "ssm:GetParameters"
       ],
       "Resource": [
-        "arn:aws:ssm:*:415805875879:parameter/akmoney/ci/backend/dockerhub-username",
-        "arn:aws:ssm:*:415805875879:parameter/akmoney/ci/backend/dockerhub-token"
+        "arn:aws:ssm:eu-north-1:415805875879:parameter/akmoney/ci/backend/dockerhub-username",
+        "arn:aws:ssm:eu-north-1:415805875879:parameter/akmoney/ci/backend/dockerhub-token"
       ]
     },
     {
@@ -23,10 +23,8 @@
       "Condition": {
         "StringEquals": {
           "kms:ViaService": [
-            "ssm.us-east-1.amazonaws.com",
-            "ssm.us-east-2.amazonaws.com",
-            "ssm.eu-west-1.amazonaws.com",
-            "ssm.eu-west-2.amazonaws.com"
+            "ssm.eu-north-1.amazonaws.com",
+            "ssm.us-east-1.amazonaws.com"
           ]
         }
       }
@@ -38,8 +36,8 @@
         "ssm:SendCommand"
       ],
       "Resource": [
-        "arn:aws:ssm:*:415805875879:document/AkMoney-Deploy-Backend",
-        "arn:aws:ssm:*:415805875879:document/AkMoney-Rollback-Backend"
+        "arn:aws:ssm:eu-north-1:415805875879:document/AkMoney-Deploy-Backend",
+        "arn:aws:ssm:eu-north-1:415805875879:document/AkMoney-Rollback-Backend"
       ]
     },
     {
@@ -49,7 +47,7 @@
         "ssm:SendCommand"
       ],
       "Resource": [
-        "arn:aws:ec2:*:415805875879:instance/*"
+        "arn:aws:ec2:eu-north-1:415805875879:instance/*"
       ],
       "Condition": {
         "StringEquals": {
