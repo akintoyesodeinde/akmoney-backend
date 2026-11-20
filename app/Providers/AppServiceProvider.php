@@ -33,19 +33,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (!cache()->get('SystemInstalled')) {
-            $envFilePath = base_path('.env');
-            if (!file_exists($envFilePath)) {
-                header('Location: install');
-                exit;
+        try {
+            if (!cache()->get('SystemInstalled')) {
+                $envFilePath = base_path('.env');
+                if (!config('app.key') && (!file_exists($envFilePath) || empty(file_get_contents($envFilePath)))) {
+                    if (!$this->app->runningInConsole()) {
+                        header('Location: install');
+                        exit;
+                    }
+                } else {
+                    cache()->put('SystemInstalled', true);
+                }
             }
-            $envContents = file_get_contents($envFilePath);
-            if (empty($envContents)) {
-                header('Location: install');
-                exit;
-            } else {
-                cache()->put('SystemInstalled', true);
-            }
+        } catch (\Throwable $e) {
+            // Allow artisan migrate / console bootstrap before cache table is created
         }
 
         $viewShare['emptyMessage'] = 'Data not found';
@@ -85,14 +86,21 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
-        if (gs('force_ssl') && config('app.env') !== 'local') {
-            \URL::forceScheme('https');
+        try {
+            if (gs('force_ssl') && config('app.env') !== 'local') {
+                \URL::forceScheme('https');
+            }
+        } catch (\Throwable $e) {
+            // Allow console commands before general_settings table is migrated
         }
-
 
         Paginator::useBootstrapFive();
 
-        View::addNamespace('Template',resource_path('views/templates/'.activeTemplateName()));
+        try {
+            View::addNamespace('Template', resource_path('views/templates/' . activeTemplateName()));
+        } catch (\Throwable $e) {
+            View::addNamespace('Template', resource_path('views/templates/basic'));
+        }
         View::composer('*', function ($view) {
             $mode = Auth::check() ? Auth::user()->current_mode : session('theme_mode', 'light');
             $view->with('themeMode', $mode);

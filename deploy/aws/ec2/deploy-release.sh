@@ -137,14 +137,15 @@ if [[ "$SERVICE" == "backend" ]]; then
     docker compose -f docker-compose.production.yml up -d --no-deps backend scheduler
 
     if [[ "$RUN_MIGRATIONS" == "true" ]]; then
-        echo "Inspecting pending Laravel migrations..."
-        docker exec -e CACHE_STORE=array -e SESSION_DRIVER=array akmoney-backend-prod php artisan migrate:status || true
         echo "Executing controlled production migrations (php artisan migrate --force)..."
+        docker exec akmoney-backend-prod sh -c "echo 'APP_NAME=AkMoney' > /var/www/html/.env && rm -f /var/www/html/bootstrap/cache/config.php"
         if ! docker exec -e CACHE_STORE=array -e SESSION_DRIVER=array akmoney-backend-prod php artisan migrate --force; then
             echo "ERROR: Database migration failed! Rolling back backend container..." >&2
             "${APP_DIR}/rollback-release.sh" backend || true
             exit 1
         fi
+        docker exec akmoney-backend-prod php artisan config:cache || true
+        docker exec akmoney-backend-prod php artisan route:cache || true
     fi
 
     if ! "${APP_DIR}/health-check.sh" backend; then
