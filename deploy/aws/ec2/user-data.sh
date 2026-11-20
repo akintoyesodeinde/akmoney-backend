@@ -170,7 +170,7 @@ if [[ "$SERVICE" == "backend" ]]; then
     export BACKEND_IMAGE="$IMAGE_TAG"
     docker compose -f docker-compose.production.yml up -d --no-deps backend scheduler
     if [[ "$RUN_MIGRATIONS" == "true" ]]; then
-        docker exec akmoney-backend-prod php artisan migrate --force || { "${APP_DIR}/rollback-release.sh" backend; exit 1; }
+        docker exec -e CACHE_STORE=array -e SESSION_DRIVER=array akmoney-backend-prod php artisan migrate --force || { "${APP_DIR}/rollback-release.sh" backend; exit 1; }
     fi
     "${APP_DIR}/health-check.sh" backend || { "${APP_DIR}/rollback-release.sh" backend; exit 1; }
 elif [[ "$SERVICE" == "frontend" ]]; then
@@ -178,7 +178,7 @@ elif [[ "$SERVICE" == "frontend" ]]; then
     docker compose -f docker-compose.production.yml up -d --no-deps frontend
     "${APP_DIR}/health-check.sh" frontend || { "${APP_DIR}/rollback-release.sh" frontend; exit 1; }
 fi
-IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_TAG" 2>/dev/null || echo "$IMAGE_TAG")
+IMAGE_DIGEST=$(docker inspect --format='{{.Id}}' "$IMAGE_TAG" 2>/dev/null | tr -d '\r\n' || echo "$IMAGE_TAG")
 cat << EOF > "$RELEASE_FILE"
 {
   "service": "$SERVICE",

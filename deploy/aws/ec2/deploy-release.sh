@@ -138,9 +138,9 @@ if [[ "$SERVICE" == "backend" ]]; then
 
     if [[ "$RUN_MIGRATIONS" == "true" ]]; then
         echo "Inspecting pending Laravel migrations..."
-        docker exec akmoney-backend-prod php artisan migrate:status || true
+        docker exec -e CACHE_STORE=array -e SESSION_DRIVER=array akmoney-backend-prod php artisan migrate:status || true
         echo "Executing controlled production migrations (php artisan migrate --force)..."
-        if ! docker exec akmoney-backend-prod php artisan migrate --force; then
+        if ! docker exec -e CACHE_STORE=array -e SESSION_DRIVER=array akmoney-backend-prod php artisan migrate --force; then
             echo "ERROR: Database migration failed! Rolling back backend container..." >&2
             "${APP_DIR}/rollback-release.sh" backend || true
             exit 1
@@ -167,7 +167,7 @@ elif [[ "$SERVICE" == "frontend" ]]; then
 fi
 
 # 5. Record verified release metadata
-IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_TAG" 2>/dev/null || echo "$IMAGE_TAG")
+IMAGE_DIGEST=$(docker inspect --format='{{.Id}}' "$IMAGE_TAG" 2>/dev/null | tr -d '\r\n' || echo "$IMAGE_TAG")
 cat << EOF > "$RELEASE_FILE"
 {
   "service": "$SERVICE",
