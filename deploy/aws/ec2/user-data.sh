@@ -16,9 +16,9 @@ echo "================================================================="
 echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] Starting AkMoney EC2 Bootstrap"
 echo "================================================================="
 
-# 1. Update operating system packages & install Docker + required utilities
+# 1. Update operating system packages & install Docker + required utilities (curl-minimal is pre-installed on AL2023)
 dnf update -y
-dnf install -y docker amazon-ssm-agent awscli jq curl tar gzip util-linux logrotate
+dnf install -y docker amazon-ssm-agent awscli jq git tar gzip util-linux logrotate mariadb105
 
 # 2. Configure 1 GiB Swap File to protect t3.micro (1 GiB RAM) against OOM spikes
 if [ ! -f /swapfile ]; then
@@ -159,7 +159,9 @@ if [[ -n "$DOCKERHUB_PULL_TOKEN" ]]; then
     printf "%s" "$DOCKERHUB_PULL_TOKEN" | docker login --username "$DOCKERHUB_USER" --password-stdin
     unset DOCKERHUB_PULL_TOKEN
 fi
-docker pull "$IMAGE_TAG"
+if ! docker image inspect "$IMAGE_TAG" >/dev/null 2>&1; then
+    docker pull "$IMAGE_TAG"
+fi
 docker logout || true
 rm -f /root/.docker/config.json
 [[ -f "$RELEASE_FILE" ]] && cp "$RELEASE_FILE" "$PREV_FILE"

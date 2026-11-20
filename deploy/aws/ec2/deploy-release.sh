@@ -109,9 +109,13 @@ if [[ -n "$DOCKERHUB_PULL_TOKEN" ]]; then
     unset DOCKERHUB_PULL_TOKEN
 fi
 
-# 3. Pull immutable target Docker image
-echo "Pulling image: $IMAGE_TAG..."
-docker pull "$IMAGE_TAG"
+# 3. Pull immutable target Docker image (if not already present locally)
+if ! docker image inspect "$IMAGE_TAG" >/dev/null 2>&1; then
+    echo "Pulling image: $IMAGE_TAG..."
+    docker pull "$IMAGE_TAG"
+else
+    echo "Verified local immutable image: $IMAGE_TAG"
+fi
 docker logout || true
 rm -f /root/.docker/config.json
 
