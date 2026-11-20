@@ -16,7 +16,8 @@ mkdir -p /var/www/html/storage/framework/cache/data \
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Clear any stale pre-migration config cache before booting
-rm -f /var/www/html/bootstrap/cache/config.php /var/www/html/bootstrap/cache/routes-v7.php
+# Clear any stale pre-migration config, route, or package discovery cache before booting
+rm -f /var/www/html/bootstrap/cache/*.php
+php /var/www/html/artisan package:discover --ansi || true
 
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
