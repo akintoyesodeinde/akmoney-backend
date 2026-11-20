@@ -1277,6 +1277,15 @@ return new class extends Migration
 ));
         }
 
+        if (Schema::hasTable('migrations')) {
+            foreach (glob(database_path('migrations/*.php')) as $migFile) {
+                $migName = basename($migFile, '.php');
+                if ($migName !== '2026_01_01_000000_create_akmoney_base_schema_tables' && !DB::table('migrations')->where('migration', $migName)->exists()) {
+                    DB::table('migrations')->insert(['migration' => $migName, 'batch' => 1]);
+                }
+            }
+        }
+
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 

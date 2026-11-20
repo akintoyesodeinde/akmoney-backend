@@ -13,7 +13,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
-use Laramin\Utility\VugiChugi;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -21,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
         using: function () {
-            Route::namespace('App\Http\Controllers')->middleware([VugiChugi::mdNm()])->group(function () {
+            Route::namespace('App\Http\Controllers')->group(function () {
                 Route::prefix('api')
                     ->middleware(['api', 'maintenance'])
                     ->group(base_path('routes/api.php'));
@@ -49,6 +48,8 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
+
         $middleware->group('web', [
             \App\Http\Middleware\ForceHttps::class,
             \App\Http\Middleware\SecurityHeaders::class,
@@ -64,7 +65,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\LanguageMiddleware::class,
             \App\Http\Middleware\ActiveTemplateMiddleware::class,
             \App\Http\Middleware\TranslatePageMiddleware::class,
-            // \App\Http\Middleware\EnsureTransactionPin::class,
         ]);
 
         $middleware->alias([
@@ -84,19 +84,19 @@ return Application::configure(basePath: dirname(__DIR__))
             'agent'              => \App\Http\Middleware\RedirectIfNotAgent::class,
             'agent.guest'        => \App\Http\Middleware\RedirectIfAgent::class,
             'check.agent.status' => \App\Http\Middleware\CheckAgentStatus::class,
-            'agent.kyc'             => \App\Http\Middleware\AgentKycMiddleware::class,
+            'agent.kyc'          => \App\Http\Middleware\AgentKycMiddleware::class,
 
             'check.status' => CheckStatus::class,
             'demo' => Demo::class,
             'kyc' => KycMiddleware::class,
             'registration.complete' => RegistrationStep::class,
             'maintenance' => MaintenanceMode::class,
-            'pin' =>\App\Http\Middleware\EnsureTransactionPin::class,
-            'recaptcha'        => \App\Http\Middleware\VerifyRecaptcha::class,
-            'progressive.delay'  => \App\Http\Middleware\ProgressiveDelay::class,
-            'size.limit'         => \App\Http\Middleware\RequestSizeLimit::class,
-            'admin.permission'   => \App\Http\Middleware\CheckAdminPermission::class,
-            'super.admin'        => \App\Http\Middleware\CheckSuperAdmin::class,
+            'pin' => \App\Http\Middleware\EnsureTransactionPin::class,
+            'recaptcha'         => \App\Http\Middleware\VerifyRecaptcha::class,
+            'progressive.delay' => \App\Http\Middleware\ProgressiveDelay::class,
+            'size.limit'        => \App\Http\Middleware\RequestSizeLimit::class,
+            'admin.permission'  => \App\Http\Middleware\CheckAdminPermission::class,
+            'super.admin'       => \App\Http\Middleware\CheckSuperAdmin::class,
         ]);
 
         $middleware->validateCsrfTokens(
